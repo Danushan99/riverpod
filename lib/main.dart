@@ -62,14 +62,19 @@ class HomePage extends ConsumerWidget {
             builder: (context, ref, child) {
               final count = ref.watch(CounterProvider);
               final pressValue =
-                  count == null ? 'press add button' : count.toString();
-              return Text(pressValue);
+                  count == null ? 'Press add button' : count.toString();
+              return Center(
+                child: Text(
+                  pressValue,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              );
             },
           ),
           TextButton(
               onPressed: ref.read(CounterProvider.notifier).incremennt,
-              child: Text(
-                "Add",
+              child: const Text(
+                "Click To Add",
               ))
         ],
       )),
