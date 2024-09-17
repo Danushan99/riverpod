@@ -1,36 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:riverpod_ex_1/enum.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-extension OriginalInfexAdition<T extends num> on T? {
-  T? operator +(T? others) {
-    final shadow = this;
-    if (shadow != null) {
-      return shadow + (others ?? 0) as T;
-    } else {
-      return null;
-    }
-  }
-}
-
-//notifier
-class Counter extends StateNotifier<int?> {
-  Counter() : super(null);
-  // void incremennt() => state++;
-  void incremennt() => state = state == null ? 1 : state + 1;
-  int? get value => state;
-}
-
-//provider
-final CounterProvider =
-    StateNotifierProvider<Counter, int?>((ref) => Counter());
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -45,39 +22,77 @@ class MyApp extends StatelessWidget {
   }
 }
 
+typedef WetherEmoji = String;
+const unKnownWetherEmoji = '🤷';
+
+Future<WetherEmoji> getWether(City city) {
+  return Future.delayed(
+    const Duration(seconds: 2),
+    () =>
+        {
+          City.batticaloa: '🌦️',
+          City.jaffna: '🌧️',
+          City.colombo: '🌧️',
+          City.kandy: '☀️'
+        }[city] ??
+        unKnownWetherEmoji,
+  );
+}
+
+final currentCityProvider = StateProvider<City?>(
+  (ref) => null,
+);
+
+final wetherProvider = FutureProvider<WetherEmoji>((ref) {
+  final city = ref.watch(currentCityProvider);
+  if (city != null) {
+    return getWether(city);
+  } else {
+    return Future.value(unKnownWetherEmoji);
+  }
+});
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentWether = ref.watch(wetherProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Home"),
+        title: const Text("Weather App"),
       ),
-      body: SingleChildScrollView(
-          child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
         children: [
-          Consumer(
-            builder: (context, ref, child) {
-              final count = ref.watch(CounterProvider);
-              final pressValue =
-                  count == null ? 'Press add button' : count.toString();
-              return Center(
-                child: Text(
-                  pressValue,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              );
-            },
+          currentWether.when(
+            data: (data) => Text(
+              data,
+              style: const TextStyle(fontSize: 40),
+            ),
+            error: (_, __) => const Text("Error"),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(18.0),
+              child: CircularProgressIndicator(),
+            ),
           ),
-          TextButton(
-              onPressed: ref.read(CounterProvider.notifier).incremennt,
-              child: const Text(
-                "Click To Add",
-              ))
+          Expanded(
+              child: ListView.builder(
+            itemCount: City.values.length,
+            itemBuilder: (context, index) {
+              final city = City.values[index];
+              final isSelected = city == ref.watch(currentCityProvider);
+              return ListTile(
+                  title: Text(city.toString().split('.').last),
+                  trailing: isSelected ? const Icon(Icons.check) : null,
+                  onTap: () => ref
+                      .read(
+                        currentCityProvider.notifier,
+                      )
+                      .state = city);
+            },
+          ))
         ],
-      )),
+      ),
     );
   }
 }
